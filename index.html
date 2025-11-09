@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UUID v7 Parser</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.9em;
+        }
+
+        .input-group {
+            margin-bottom: 30px;
+        }
+
+        label {
+            display: block;
+            color: #555;
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 0.95em;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+            font-family: 'Courier New', monospace;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        button {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .parse-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .parse-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .generate-btn {
+            background: #10b981;
+            color: white;
+        }
+
+        .generate-btn:hover {
+            background: #059669;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4);
+        }
+
+        .clear-btn {
+            background: #ef4444;
+            color: white;
+        }
+
+        .clear-btn:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
+        }
+
+        .results {
+            display: none;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .info-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 5px solid #667eea;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #555;
+            flex: 0 0 40%;
+        }
+
+        .info-value {
+            color: #333;
+            font-family: 'Courier New', monospace;
+            text-align: right;
+            word-break: break-all;
+            flex: 1;
+        }
+
+        .section-title {
+            font-size: 1.3em;
+            color: #333;
+            margin-bottom: 15px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 2px;
+        }
+
+        .error {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 5px solid #dc2626;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .binary-display {
+            background: #1e293b;
+            color: #10b981;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            overflow-x: auto;
+            margin-top: 10px;
+            line-height: 1.6;
+        }
+
+        .highlight {
+            background: rgba(102, 126, 234, 0.2);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 UUID v7 Parser</h1>
+        <p class="subtitle">Parse and analyze UUID version 7 timestamps and components</p>
+
+        <div class="input-group">
+            <label for="uuidInput">Enter UUID v7:</label>
+            <input type="text" id="uuidInput" placeholder="e.g., 018c7e69-6f4e-7abc-9def-0123456789ab (with or without dashes)">
+        </div>
+
+        <div class="button-group">
+            <button class="parse-btn" onclick="parseUUID()">Parse UUID</button>
+            <button class="generate-btn" onclick="generateUUID()">Generate New</button>
+            <button class="clear-btn" onclick="clearAll()">Clear</button>
+        </div>
+
+        <div class="error" id="error"></div>
+
+        <div class="results" id="results">
+            <div class="info-card">
+                <div class="section-title">Basic Information</div>
+                <div class="info-row">
+                    <span class="info-label">UUID:</span>
+                    <span class="info-value" id="uuid"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Version:</span>
+                    <span class="info-value" id="version"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Variant:</span>
+                    <span class="info-value" id="variant"></span>
+                </div>
+            </div>
+
+            <div class="info-card">
+                <div class="section-title">Timestamp Information</div>
+                <div class="info-row">
+                    <span class="info-label">Unix Timestamp (ms):</span>
+                    <span class="info-value" id="timestamp"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Date & Time (UTC):</span>
+                    <span class="info-value" id="datetime"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Date & Time (Local):</span>
+                    <span class="info-value" id="datetimeLocal"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Relative Time:</span>
+                    <span class="info-value" id="relativeTime"></span>
+                </div>
+            </div>
+
+            <div class="info-card">
+                <div class="section-title">UUID Components</div>
+                <div class="info-row">
+                    <span class="info-label">Timestamp (48-bit):</span>
+                    <span class="info-value" id="timestampBits"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Version Field:</span>
+                    <span class="info-value" id="versionBits"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Random A (12-bit):</span>
+                    <span class="info-value" id="randA"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Variant Field:</span>
+                    <span class="info-value" id="variantBits"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Random B (62-bit):</span>
+                    <span class="info-value" id="randB"></span>
+                </div>
+            </div>
+
+            <div class="info-card">
+                <div class="section-title">Binary Representation</div>
+                <div class="binary-display" id="binaryDisplay"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function parseUUID() {
+            let input = document.getElementById('uuidInput').value.trim();
+            const error = document.getElementById('error');
+            const results = document.getElementById('results');
+
+            // Clear previous error
+            error.style.display = 'none';
+            error.textContent = '';
+
+            // Remove hyphens if present
+            let hex = input.replace(/-/g, '');
+
+            // Validate UUID format (with or without dashes)
+            const uuidWithDashRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            const uuidWithoutDashRegex = /^[0-9a-f]{32}$/i;
+            
+            if (!uuidWithDashRegex.test(input) && !uuidWithoutDashRegex.test(input)) {
+                error.textContent = 'Invalid UUID format. Please enter a valid UUID with or without dashes (e.g., 018c7e69-6f4e-7abc-9def-0123456789ab or 018c7e696f4e7abc9def0123456789ab)';
+                error.style.display = 'block';
+                results.style.display = 'none';
+                return;
+            }
+
+            // Format UUID with dashes for display
+            const formattedUUID = `${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20, 32)}`;
+            input = formattedUUID;
+            
+            // Extract version (4 bits at position 48-51)
+            const versionHex = hex.charAt(12);
+            const version = parseInt(versionHex, 16);
+
+            // Check if it's version 7
+            if (version !== 7) {
+                error.textContent = `This appears to be UUID version ${version}, not version 7. This parser is designed for UUID v7.`;
+                error.style.display = 'block';
+                results.style.display = 'none';
+                return;
+            }
+
+            // Parse timestamp (first 48 bits / 12 hex chars)
+            const timestampHex = hex.substring(0, 12);
+            const timestamp = parseInt(timestampHex, 16);
+
+            // Extract variant (2 bits)
+            const variantByte = parseInt(hex.substring(16, 18), 16);
+            const variantBits = (variantByte >> 6) & 0x03;
+            let variantName = 'Unknown';
+            if (variantBits === 2) variantName = 'RFC 4122';
+            else if (variantBits === 0) variantName = 'NCS';
+            else if (variantBits === 3) variantName = 'Microsoft';
+
+            // Extract random bits
+            const randAHex = hex.substring(13, 16); // 12 bits after version
+            const randABinary = parseInt(randAHex, 16).toString(2).padStart(12, '0');
+            
+            const randBHex = hex.substring(16, 32); // Last 64 bits (but 2 bits are variant)
+            const randBValue = BigInt('0x' + randBHex);
+            const randBBinary = randBValue.toString(2).padStart(64, '0').substring(2); // Remove variant bits
+
+            // Create date objects
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diffMs = now - date;
+
+            // Format relative time
+            const relativeTime = formatRelativeTime(diffMs);
+
+            // Display results
+            document.getElementById('uuid').textContent = input.toLowerCase();
+            document.getElementById('version').textContent = `7 (Time-ordered with random data)`;
+            document.getElementById('variant').textContent = `${variantName} (bits: ${variantBits.toString(2).padStart(2, '0')})`;
+            
+            document.getElementById('timestamp').textContent = timestamp.toLocaleString();
+            document.getElementById('datetime').textContent = date.toUTCString();
+            document.getElementById('datetimeLocal').textContent = date.toString();
+            document.getElementById('relativeTime').textContent = relativeTime;
+
+            document.getElementById('timestampBits').textContent = `0x${timestampHex} (${timestamp})`;
+            document.getElementById('versionBits').textContent = `0x7 (0111 in binary)`;
+            document.getElementById('randA').textContent = `0x${randAHex} (${parseInt(randAHex, 16)})`;
+            document.getElementById('variantBits').textContent = `0b${variantBits.toString(2).padStart(2, '0')} (${variantBits})`;
+            document.getElementById('randB').textContent = `0x${randBHex.substring(1)} (${randBBinary.length} bits)`;
+
+            // Binary representation
+            const binary = BigInt('0x' + hex).toString(2).padStart(128, '0');
+            const binaryFormatted = `
+<span class="highlight">Timestamp (48 bits):</span>
+${binary.substring(0, 48).match(/.{1,8}/g).join(' ')}
+
+<span class="highlight">Version (4 bits):</span> ${binary.substring(48, 52)}
+<span class="highlight">Random A (12 bits):</span> ${binary.substring(52, 64)}
+
+<span class="highlight">Variant (2 bits):</span> ${binary.substring(64, 66)}
+<span class="highlight">Random B (62 bits):</span>
+${binary.substring(66, 128).match(/.{1,8}/g).join(' ')}
+            `;
+            document.getElementById('binaryDisplay').innerHTML = binaryFormatted;
+
+            results.style.display = 'block';
+        }
+
+        function generateUUID() {
+            // Generate UUID v7
+            const timestamp = Date.now();
+            const timestampHex = timestamp.toString(16).padStart(12, '0');
+            
+            // Generate random bits (12 bits for rand_a)
+            const randA = Math.floor(Math.random() * 0x1000).toString(16).padStart(3, '0');
+            
+            // Generate random bits for rand_b (62 bits total, split into parts)
+            // First 2 bits are for variant (10 for RFC 4122)
+            const randB1 = Math.floor(Math.random() * 0x4000).toString(16).padStart(4, '0'); // 14 bits
+            const randB2 = Math.floor(Math.random() * 0x100000000).toString(16).padStart(8, '0'); // 32 bits
+            const randB3 = Math.floor(Math.random() * 0x10000).toString(16).padStart(4, '0'); // 16 bits
+            
+            // Set variant bits (10xxxxxx for RFC 4122) - modify first byte of randB1
+            const variantByte = (parseInt(randB1.substring(0, 2), 16) & 0x3F) | 0x80;
+            const variantHex = variantByte.toString(16).padStart(2, '0');
+            
+            // Construct UUID with proper format
+            const uuid = `${timestampHex.substring(0, 8)}-${timestampHex.substring(8, 12)}-7${randA}-${variantHex}${randB1.substring(2, 4)}-${randB2}${randB3}`;
+            
+            document.getElementById('uuidInput').value = uuid;
+            parseUUID();
+        }
+
+        function clearAll() {
+            document.getElementById('uuidInput').value = '';
+            document.getElementById('results').style.display = 'none';
+            document.getElementById('error').style.display = 'none';
+        }
+
+        function formatRelativeTime(ms) {
+            const seconds = Math.floor(Math.abs(ms) / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+            const months = Math.floor(days / 30);
+            const years = Math.floor(days / 365);
+
+            const isFuture = ms < 0;
+            const prefix = isFuture ? 'in ' : '';
+            const suffix = isFuture ? '' : ' ago';
+
+            if (years > 0) return `${prefix}${years} year${years > 1 ? 's' : ''}${suffix}`;
+            if (months > 0) return `${prefix}${months} month${months > 1 ? 's' : ''}${suffix}`;
+            if (days > 0) return `${prefix}${days} day${days > 1 ? 's' : ''}${suffix}`;
+            if (hours > 0) return `${prefix}${hours} hour${hours > 1 ? 's' : ''}${suffix}`;
+            if (minutes > 0) return `${prefix}${minutes} minute${minutes > 1 ? 's' : ''}${suffix}`;
+            return `${prefix}${seconds} second${seconds !== 1 ? 's' : ''}${suffix}`;
+        }
+
+        // Allow parsing on Enter key
+        document.getElementById('uuidInput').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                parseUUID();
+            }
+        });
+    </script>
+</body>
+</html>
